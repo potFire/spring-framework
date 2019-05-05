@@ -54,39 +54,22 @@ import java.nio.channels.ReadableByteChannel;
 public interface Resource extends InputStreamSource {
 
 	/**
-     * 资源是否存在
-     *
-	 * Determine whether this resource actually exists in physical form.
-	 * <p>This method performs a definitive existence check, whereas the
-	 * existence of a {@code Resource} handle only guarantees a valid
-	 * descriptor handle.
+     * 用于判断对应的资源是否真的存在
 	 */
 	boolean exists();
 
 	/**
-     * 资源是否可读
-     *
-	 * Indicate whether non-empty contents of this resource can be read via
-	 * {@link #getInputStream()}.
-	 * <p>Will be {@code true} for typical resource descriptors that exist
-	 * since it strictly implies {@link #exists()} semantics as of 5.1.
-	 * Note that actual content reading may still fail when attempted.
-	 * However, a value of {@code false} is a definitive indication
-	 * that the resource content cannot be read.
-	 * @see #getInputStream()
-	 * @see #exists()
+     * 用于判断对应资源的内容是否可读。需要注意的是当其结果为 true 的时候，
+	 * 其内容未必真的可读，但如果返回false，则其内容必定不可读
 	 */
 	default boolean isReadable() {
 		return exists();
 	}
 
 	/**
-     * 资源所代表的句柄是否被一个 stream 打开了
-     *
-	 * Indicate whether this resource represents a handle with an open stream.
-	 * If {@code true}, the InputStream cannot be read multiple times,
-	 * and must be read and closed to avoid resource leaks.
-	 * <p>Will be {@code false} for typical resource descriptors.
+     * 用于判断当前资源是否代表一个已打开的输入流，如果结果为true，则表示当前资源的输入流不可被多次读取，
+	 * 而且在读取以后需要对他进行关闭，以防止内存泄漏。
+	 * 该方法主要针对于 InputStreamResource ，实现类中只有它的返回结果为true ,其他都为false
 	 */
 	default boolean isOpen() {
 		return false;
@@ -94,60 +77,32 @@ public interface Resource extends InputStreamSource {
 
 	/**
      * 是否为 File
-     *
-	 * Determine whether this resource represents a file in a file system.
-	 * A value of {@code true} strongly suggests (but does not guarantee)
-	 * that a {@link #getFile()} call will succeed.
-	 * <p>This is conservatively {@code false} by default.
-	 * @since 5.0
-	 * @see #getFile()
 	 */
 	default boolean isFile() {
 		return false;
 	}
 
 	/**
-     * 返回资源的 URL 的句柄
-     *
-	 * Return a URL handle for this resource.
-	 * @throws IOException if the resource cannot be resolved as URL,
-	 * i.e. if the resource is not available as descriptor
+	 * URL和URI的异同可以看这篇文章：https://segmentfault.com/a/1190000006081973
+     * 返回资源的 URL
 	 */
 	URL getURL() throws IOException;
 
 	/**
-     * 返回资源的 URI 的句柄
-     *
-	 * Return a URI handle for this resource.
-	 * @throws IOException if the resource cannot be resolved as URI,
-	 * i.e. if the resource is not available as descriptor
-	 * @since 2.5
+     * 返回资源的 URI
+	 * URL和URI都是为了获取网络文件的路径，并去加载该文件
+	 * 如果当前资源不能解析为一个URL则会抛出异常
 	 */
 	URI getURI() throws IOException;
 
 	/**
-     * 返回资源的 File 的句柄
-     *
-	 * Return a File handle for this resource.
-	 * @throws java.io.FileNotFoundException if the resource cannot be resolved as
-	 * absolute file path, i.e. if the resource is not available in a file system
-	 * @throws IOException in case of general resolution/reading failures
-	 * @see #getInputStream()
+     * 返回当前资源对应的File实例
 	 */
 	File getFile() throws IOException;
 
 	/**
-     * 返回 ReadableByteChannel
-     *
-	 * Return a {@link ReadableByteChannel}.
-	 * <p>It is expected that each call creates a <i>fresh</i> channel.
-	 * <p>The default implementation returns {@link Channels#newChannel(InputStream)}
-	 * with the result of {@link #getInputStream()}.
-	 * @return the byte channel for the underlying resource (must not be {@code null})
-	 * @throws java.io.FileNotFoundException if the underlying resource doesn't exist
-	 * @throws IOException if the content channel could not be opened
-	 * @since 5.0
-	 * @see #getInputStream()
+     * 返回 一个从给定流(getInputStream)读取字节的通道
+	 * 关于ReadableByteChannel 可以查看 https://www.cnblogs.com/chenpi/p/6481271.html
 	 */
 	default ReadableByteChannel readableChannel() throws IOException {
 		return Channels.newChannel(getInputStream());
@@ -155,51 +110,27 @@ public interface Resource extends InputStreamSource {
 
 	/**
      * 资源内容的长度
-     *
-	 * Determine the content length for this resource.
-	 * @throws IOException if the resource cannot be resolved
-	 * (in the file system or as some other known physical resource type)
 	 */
 	long contentLength() throws IOException;
 
 	/**
      * 资源最后的修改时间
-     *
-	 * Determine the last-modified timestamp for this resource.
-	 * @throws IOException if the resource cannot be resolved
-	 * (in the file system or as some other known physical resource type)
 	 */
 	long lastModified() throws IOException;
 
 	/**
      * 根据资源的相对路径创建新资源
-     *
-	 * Create a resource relative to this resource.
-	 * @param relativePath the relative path (relative to this resource)
-	 * @return the resource handle for the relative resource
-	 * @throws IOException if the relative resource cannot be determined
 	 */
 	Resource createRelative(String relativePath) throws IOException;
 
 	/**
      * 资源的文件名
-     *
-	 * Determine a filename for this resource, i.e. typically the last
-	 * part of the path: for example, "myfile.txt".
-	 * <p>Returns {@code null} if this type of resource does not
-	 * have a filename.
 	 */
 	@Nullable
 	String getFilename();
 
 	/**
      * 资源的描述
-     *
-	 * Return a description for this resource,
-	 * to be used for error output when working with the resource.
-	 * <p>Implementations are also encouraged to return this value
-	 * from their {@code toString} method.
-	 * @see Object#toString()
 	 */
 	String getDescription();
 
