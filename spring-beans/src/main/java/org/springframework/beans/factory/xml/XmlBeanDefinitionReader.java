@@ -308,8 +308,10 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @return the number of bean definitions found
 	 * @throws BeanDefinitionStoreException in case of loading or parsing errors
 	 */
+	//XmlBeanDefinitionReader 加载资源的入口方法
 	@Override
 	public int loadBeanDefinitions(Resource resource) throws BeanDefinitionStoreException {
+		//将读入的XML资源进行特殊编码处理
 		return loadBeanDefinitions(new EncodedResource(resource));
 	}
 
@@ -320,6 +322,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @return the number of bean definitions found
 	 * @throws BeanDefinitionStoreException in case of loading or parsing errors
 	 */
+	//这里是载入XML形式 Bean定义资源文件方法
 	public int loadBeanDefinitions(EncodedResource encodedResource) throws BeanDefinitionStoreException {
 		Assert.notNull(encodedResource, "EncodedResource must not be null");
 		if (logger.isTraceEnabled()) {
@@ -339,6 +342,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
             // 从 EncodedResource 获取封装的 Resource ，并从 Resource 中获取其中的 InputStream
 			InputStream inputStream = encodedResource.getResource().getInputStream();
 			try {
+				//从InputStream中得到XML的解析源
 				InputSource inputSource = new InputSource(inputStream);
 				if (encodedResource.getEncoding() != null) { // 设置编码
 					inputSource.setEncoding(encodedResource.getEncoding());
