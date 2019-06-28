@@ -212,6 +212,7 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 	 */
 	public int loadBeanDefinitions(String location, @Nullable Set<Resource> actualResources) throws BeanDefinitionStoreException {
 		// 获得 ResourceLoader 对象
+		//获取 IOC 容器初始化过程中设置的资源加载器
 	    ResourceLoader resourceLoader = getResourceLoader();
 		if (resourceLoader == null) {
 			throw new BeanDefinitionStoreException(
@@ -222,8 +223,10 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 			// Resource pattern matching available.
 			try {
 			    // 获得 Resource 数组，因为 Pattern 模式匹配下，可能有多个 Resource 。例如说，Ant 风格的 location
+				//将指定位置的 bean 配置信息解析为 Spring IOC 容器封装的资源，加载多个指定位置的 bean 配置信息
 				Resource[] resources = ((ResourcePatternResolver) resourceLoader).getResources(location);
 				// 加载 BeanDefinition 们
+				//委派调用其子类 XMLBeanDefinitionReader 的方法实现加载功能
 				int count = loadBeanDefinitions(resources);
 				// 添加到 actualResources 中
 				if (actualResources != null) {
@@ -240,8 +243,10 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 		} else {
 			// Can only load single resources by absolute URL.
             // 获得 Resource 对象，
+			//将指定位置的 bean 配置信息解析为 Spring IOC 容器封装的资源，加载多个指定位置的 bean 配置信息
 			Resource resource = resourceLoader.getResource(location);
             // 加载 BeanDefinition 们
+			//委派调用其子类 XMLBeanDefinitionReader 的方法实现加载功能
 			int count = loadBeanDefinitions(resource);
             // 添加到 actualResources 中
 			if (actualResources != null) {
