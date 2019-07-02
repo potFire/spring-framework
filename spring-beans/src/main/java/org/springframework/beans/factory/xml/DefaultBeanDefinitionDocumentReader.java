@@ -127,6 +127,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		// then ultimately reset this.delegate back to its original (parent) reference.
 		// this behavior emulates a stack of delegates without actually necessitating one.
         // 记录老的 BeanDefinitionParserDelegate 对象
+		//具体的解析过程由 BeanDefinitionParserDelegate 实现，BeanDefinitionParserDelegate 中定义了 spring bean 定义 xml 文件的各种元素
 		BeanDefinitionParserDelegate parent = this.delegate;
 		// 创建 BeanDefinitionParserDelegate 对象，并进行设置到 delegate
 		this.delegate = createDelegate(getReaderContext(), root, parent);
@@ -162,6 +163,13 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		this.delegate = parent;
 	}
 
+	/**
+	 * 创建 BeanDefinitionParserDelegate 用于完成真正的解析过程
+	 * @param readerContext
+	 * @param root
+	 * @param parentDelegate
+	 * @return
+	 */
 	protected BeanDefinitionParserDelegate createDelegate(
 			XmlReaderContext readerContext, Element root, @Nullable BeanDefinitionParserDelegate parentDelegate) {
 	    // 创建 BeanDefinitionParserDelegate 对象
@@ -172,12 +180,14 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	}
 
 	/**
+	 * 使用 spring 的 bean 规则 从 document 的根元素开始进行 bean 的定义的 document 对象
 	 * Parse the elements at the root level in the document:
 	 * "import", "alias", "bean".
 	 * @param root the DOM root element of the document
 	 */
 	protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
 	    // 如果根节点使用默认命名空间，执行默认解析
+		//bean 定义了 document 对象使用了 spring 默认的 XML 命名空间
 		if (delegate.isDefaultNamespace(root)) {
 		    // 遍历子节点
 			NodeList nl = root.getChildNodes();
@@ -187,6 +197,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 					Element ele = (Element) node;
 					// 如果该节点使用默认命名空间，执行默认解析
 					if (delegate.isDefaultNamespace(ele)) {
+						//使用 spring的 bean 规则解析元素节点
 						parseDefaultElement(ele, delegate);
                     // 如果该节点非默认命名空间，执行自定义解析
 					} else {
@@ -200,11 +211,20 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		}
 	}
 
+	/**
+	 * 使用了spring 的 bean 规则解析 document 元素节点
+	 * @param ele
+	 * @param delegate
+	 */
 	private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
+		//如果元素节点是<Import> 导入元素，进行导入解析
 		if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) { // import
 			importBeanDefinitionResource(ele);
+			//如果元素节点是<Alias>别名元素，进行别名解析
 		} else if (delegate.nodeNameEquals(ele, ALIAS_ELEMENT)) { // alias
 			processAliasRegistration(ele);
+			//元素节点既不是导入元素，也不是别名元素，即普通的<Bean>元素，
+			//按照 Spring 的 Bean 规则解析元素
 		} else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) { // bean
 			processBeanDefinition(ele, delegate);
 		} else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) { // beans
@@ -214,6 +234,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	}
 
 	/**
+	 * 解析<Import>导入元素，从给定的导入路径加载 Bean 配置资源到 Spring IOC 容器中
 	 * Parse an "import" element and load the bean definitions
 	 * from the given resource into the bean factory.
 	 */

@@ -435,6 +435,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
         // 确保此时的 bean 已经被解析了
         // 如果获取的class 属性不为null，则克隆该 BeanDefinition
         // 主要是因为该动态解析的 class 无法保存到到共享的 BeanDefinition
+		//判断需要创建的 Bean 是否可以实例化，即是可以通过当前的类加载器加载
 		Class<?> resolvedClass = resolveBeanClass(mbd, beanName);
 		if (resolvedClass != null && !mbd.hasBeanClass() && mbd.getBeanClassName() != null) {
 			mbdToUse = new RootBeanDefinition(mbd);
@@ -482,6 +483,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 真正创建 Bean 的方法
 	 * Actually create the specified bean. Pre-creation processing has already happened
 	 * at this point, e.g. checking {@code postProcessBeforeInstantiation} callbacks.
 	 * <p>Differentiates between default bean instantiation, use of a
@@ -500,6 +502,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// Instantiate the bean.
         // BeanWrapper 是对 Bean 的包装，其接口中所定义的功能很简单包括设置获取被包装的对象，获取被包装 bean 的属性描述器
+		// 封装被创建的 Bean
 		BeanWrapper instanceWrapper = null;
         // 单例模型，则从未完成的 FactoryBean 缓存中删除
 		if (mbd.isSingleton()) {
@@ -1085,6 +1088,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 创建 Bean 的实例对象
 	 * Create a new instance for the specified bean, using an appropriate instantiation strategy:
 	 * factory method, constructor autowiring, or simple instantiation.
 	 * @param beanName the name of the bean
@@ -1099,6 +1103,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	protected BeanWrapper createBeanInstance(String beanName, RootBeanDefinition mbd, @Nullable Object[] args) {
 		// Make sure bean class is actually resolved at this point.
         // 解析 bean ，将 bean 类名解析为 class 引用。
+		//检查确认 Bean 是可以实例化的
 		Class<?> beanClass = resolveBeanClass(mbd, beanName);
 
 		if (beanClass != null && !Modifier.isPublic(beanClass.getModifiers()) && !mbd.isNonPublicAccessAllowed()) { // 校验
@@ -1114,10 +1119,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
         // 使用 FactoryBean 的 factory-method 来创建，支持静态工厂和实例工厂
 		if (mbd.getFactoryMethodName() != null)  {
+			//调用工厂方法实例化
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
 
 		// Shortcut when re-creating the same bean...
+		//使用容器的自动装配方法进行实例化
 		boolean resolved = false;
 		boolean autowireNecessary = false;
 		if (args == null) {

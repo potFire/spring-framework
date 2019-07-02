@@ -410,10 +410,12 @@ public class BeanDefinitionParserDelegate {
 
         // 检查 beanName 的唯一性
 		if (containingBean == null) {
+			//检查<Bean>元素所配置的 id、name 或者别名是否重复
 			checkNameUniqueness(beanName, aliases, ele);
 		}
 
         // 解析属性，构造 AbstractBeanDefinition 对象
+		//详细对 <Bean> 元素中配置的 Bean 定义进行解析的地方
 		AbstractBeanDefinition beanDefinition = parseBeanDefinitionElement(ele, beanName, containingBean);
 		if (beanDefinition != null) {
 		    // beanName ，再次，使用 beanName 生成规则
