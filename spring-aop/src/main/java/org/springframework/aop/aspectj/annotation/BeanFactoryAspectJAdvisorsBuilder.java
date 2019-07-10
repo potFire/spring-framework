@@ -90,6 +90,11 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 
 
 	/**
+	 * 总结：
+	 * 	1、获取容器中所有的 bean 的名称 beanName
+	 * 	2、遍历上一步获取到的 bean 名称的数组，并获取当前 beanName 对应 bean 类型 （beanType）
+	 * 	3、根据 beanType 判断当前 bean 是否是一个 Aspect 注解类，若不是则不做任何处理
+	 * 	4、调用 advisorFactory.getAdsors 获取通知器
 	 * Look for AspectJ-annotated aspect beans in the current bean factory,
 	 * and return to a list of Spring AOP Advisors representing them.
 	 * <p>Creates a Spring Advisor for each AspectJ advice method.

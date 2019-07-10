@@ -44,6 +44,19 @@ import java.util.List;
 @SuppressWarnings("serial")
 public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializable {
 
+	/**
+	 * 总结：
+	 * 1、遍历通知器列表
+	 * 2、对于 PointcutAdvisor 类型的通知器，这里要调用通知器所持有的切点（Pointcut）对类和方法进行匹配，
+	 * 匹配成功说明应向当前方法织入通知逻辑
+	 * 3、调用 getInterceptors 方法对非 MethodInterceptor 类型的通知进行转换
+	 * 4、返回拦截器数组，并随后存入缓存中
+	 * @param config the AOP configuration in the form of an Advised object
+	 * @param method the proxied method
+	 * @param targetClass the target class (may be {@code null} to indicate a proxy without
+	 * target object, in which case the method's declaring class is the next best option)
+	 * @return
+	 */
     @Override
     public List<Object> getInterceptorsAndDynamicInterceptionAdvice(
             Advised config, Method method, @Nullable Class<?> targetClass) {
@@ -62,7 +75,11 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
             if (advisor instanceof PointcutAdvisor) {
                 // Add it conditionally.
                 PointcutAdvisor pointcutAdvisor = (PointcutAdvisor) advisor;
-                if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
+				/**
+				 * 调用 ClassFilter 对 bean 类型进行匹配，无法匹配则说明当前通知器
+				 * 不适合应用在当前 bean 上
+				 */
+				if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
                     MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher();
                     // 判断是否匹配
                     boolean match;
@@ -70,12 +87,15 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
                         if (hasIntroductions == null) {
                             hasIntroductions = hasMatchingIntroductions(advisors, actualClass);
                         }
+                        //通过方法匹配器对目标方法进行匹配
                         match = ((IntroductionAwareMethodMatcher) mm).matches(method, actualClass, hasIntroductions);
                     } else {
                         match = mm.matches(method, actualClass);
                     }
                     if (match) {
+						//将 advisor 中的 advice 转成相应的拦截器
                         MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
+                        //若 isRuntime 返回 true ，则表明 MethodMastcher 要在运行时做一些检测
                         if (mm.isRuntime()) { // 运行时，封装成对应的 InterceptorAndDynamicMethodMatcher 拦截器对象。TODO 芋艿，暂时没详细调试
                             // Creating a new object instance in the getInterceptors() method
                             // isn't a problem as we normally cache created chains.

@@ -70,7 +70,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	@Nullable
 	protected Object[] getAdvicesAndAdvisorsForBean(
 			Class<?> beanClass, String beanName, @Nullable TargetSource targetSource) {
-	    // 获得匹配的 Advisor 增强器
+		//查找合适的通知器
 		List<Advisor> advisors = findEligibleAdvisors(beanClass, beanName);
 		// 无匹配，返回 DO_NOT_PROXY
 		if (advisors.isEmpty()) {
@@ -91,13 +91,16 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * @see #extendAdvisors
 	 */
 	protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
-	    // 获取所有 Advisor 增强器
+		//查找所有的通知器
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
-		// 从所有 Advisor 增强器中，寻找匹配的
+		/**
+		 * 筛选可应用在 beanClass 上的 Advisor ，通过 ClassFilter 和 MethodMatcher
+		 * 对目标类和方法进行匹配
+		 */
 		List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
 		// 拓展 Advisor 集合。目前实现为空，子类可覆盖实现自定义逻辑
 		extendAdvisors(eligibleAdvisors);
-		// 排序匹配的 Advisor 增强器
+		// 排序匹配的 Advisor 通知器
 		if (!eligibleAdvisors.isEmpty()) {
 			eligibleAdvisors = sortAdvisors(eligibleAdvisors);
 		}

@@ -161,6 +161,13 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler /* 重要 
 
 
 	/**
+	 * 总结：
+	 * 1、检测 expose-proxy 是否为 true ，若为true，则暴露代理对象
+	 * 2、获取适合当前方法的拦截器
+	 * 3、如果拦截器链为空，则直接通过反射执行目标方法
+	 * 4、若拦截器链不为空，则创建方法调用 ReflectiveMethodInvocation 对象
+	 * 5、调用 ReflectieMethodInvocation 对象的 proceed() 方法启动拦截器链
+	 * 6、陈琳返回值，并返回该值
 	 * Implementation of {@code InvocationHandler.invoke}.
 	 * <p>Callers will see exactly the exception thrown by the target,
 	 * unless a hook method throws an exception.
@@ -236,7 +243,7 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler /* 重要 
 			}
 
 			// Massage return value if necessary.
-            // 处理方法结果
+            // 获取方法返回值类型
 			Class<?> returnType = method.getReturnType();
 			// TODO 芋艿，没太看明白
 			if (retVal != null && retVal == target &&

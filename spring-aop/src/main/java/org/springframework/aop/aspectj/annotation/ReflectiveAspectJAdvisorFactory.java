@@ -179,6 +179,15 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	}
 
 
+	/**
+	 * 总结：
+	 * 1、获取切点下的通知（增强）
+	 * @param candidateAdviceMethod the candidate advice method
+	 * @param aspectInstanceFactory the aspect instance factory
+	 * @param declarationOrderInAspect
+	 * @param aspectName the name of the aspect
+	 * @return
+	 */
 	@Override
 	@Nullable
 	public Advisor getAdvisor(Method candidateAdviceMethod, MetadataAwareAspectInstanceFactory aspectInstanceFactory,
@@ -203,6 +212,7 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	@Nullable
 	private AspectJExpressionPointcut getPointcut(Method candidateAdviceMethod, Class<?> candidateAspectClass) {
 	    // 获得方法上的注解 {@link AspectJAnnotation} 的对象
+		//获取方法上的 AspectJ 相关注解，包括 @Before @After
 		AspectJAnnotation<?> aspectJAnnotation =
 				AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(candidateAdviceMethod);
 		if (aspectJAnnotation == null) { // 获取不到

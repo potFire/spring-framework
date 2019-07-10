@@ -475,8 +475,10 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 		List<Object> cached = this.methodCache.get(cacheKey);
 		// 获取不到，则进行构建
 		if (cached == null) {
+			//获取所有的拦截器
 			cached = this.advisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(
 					this, method, targetClass);
+			//存入缓存
 			this.methodCache.put(cacheKey, cached);
 		}
 		return cached;

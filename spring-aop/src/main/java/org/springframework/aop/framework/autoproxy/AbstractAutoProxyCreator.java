@@ -308,7 +308,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
             // 获得缓存 KEY
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
 			if (!this.earlyProxyReferences.contains(cacheKey)) {
-			    // TODO 芋艿 如果它适合被打理， 则需要封装指定 Bean
+			    // TODO 芋艿 如果它适合被代理， 则需要封装指定 Bean
 				return wrapIfNecessary(bean, beanName, cacheKey);
 			}
 		}
@@ -354,16 +354,23 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
 			return bean;
 		}
-        // 判断，是否无需代理
+		/**
+		 * 如果是基础设施类（Pointcut，Advice，Advisor 等接口的实现类），或是应该跳过的类，
+		 * 则不应该生成代理，此时直接返回 bean
+		 */
 		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
+			//将 <cacheKey,false>键值对放入缓存中，供上面的if分支使用
 			this.advisedBeans.put(cacheKey, Boolean.FALSE);
 			return bean;
 		}
 
 		// Create proxy if we have advice.
-        // 获得 Bean 对象，对应的增强器们
+		// 为目标 bean 查找合适的通知器
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
-		// 芋艿，如果获取到了增强，则需要针对增强创建代理
+		/**
+		 * 若 specificInterceptors != null 即 specificInterceptors ！= DO_NOT_PROXY，
+		 * 则为 bean 生成代理对象，否则直接返回 bean
+		 */
 		if (specificInterceptors != DO_NOT_PROXY) {
 		    // 通过 advisedBeans 标记，需要增强
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
@@ -372,6 +379,10 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 					bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
 			// 记录代理类型
 			this.proxyTypes.put(cacheKey, proxy.getClass());
+			/**
+			 * 返回代理对象，此时 IOC 容器输入 beanName 得到 proxy
+			 * 也就是说，beanName 对应的是 bean 的代理对象，而非原始的 bean
+			 */
 			return proxy;
 		}
 
@@ -476,6 +487,10 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		// 获取当前类的属性，到 ProxyFactory 中
 		proxyFactory.copyFrom(this);
 
+		/**
+		 * 默认设置下，或用户显式配置 proxy-target-class = "false" 时，
+		 * 这里的 ProxyFactory.isProxyTargetClass() 也为 false
+		 */
 		// 判断对于给定的 Bean 是否使用 targetClass ，而不是接口代理。
         //      使用 CGLIB 代理时，相当于使用 targetClass 代理
         //      使用 JDK 代理时，相当于使用期接口代理。
@@ -484,7 +499,10 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			if (shouldProxyTargetClass(beanClass, beanName)) {
 				proxyFactory.setProxyTargetClass(true); // 设置使用 targetClass 代理
 			} else {
-			    // 评估是否代理接口
+				/**
+				 * 检测 beanClass 是否实现了接口，若未实现，则将
+				 * ProxyFactory 的成员变量 ProxyTargetClass 设为 true
+				 */
 				evaluateProxyInterfaces(beanClass, proxyFactory);
 			}
 		}

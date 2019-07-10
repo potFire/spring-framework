@@ -32,8 +32,8 @@ import java.util.List;
 public abstract class AspectJProxyUtils {
 
 	/**
-     * 如果需要（具体的条件，看代码），添加 ExposeInvocationInterceptor 到其中。
-     *
+     * 总结：
+     *1、向通知器列表首部添加 DefaultPointcutAdvisor 类型的通知器，也就是 ExposeInvationlnterceptor.ADBISOR
 	 * Add special advisors if necessary to work with a proxy chain that contains AspectJ advisors.
 	 * This will expose the current Spring AOP invocation (necessary for some AspectJ pointcut matching)
 	 * and make available the current AspectJ JoinPoint. The call will have no effect if there are no

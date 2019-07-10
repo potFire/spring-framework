@@ -204,6 +204,9 @@ public abstract class AopUtils {
 	}
 
 	/**
+	 * 总结：
+	 * 1、采用classFilter判断 class 是否匹配
+	 * 2、获取该 接口 的所有方法，包括继承了父类的，然后根据表达式判断是否匹配
 	 * Can the given pointcut apply at all on the given class?
 	 * <p>This is an important test as it can be used to optimize
 	 * out a pointcut for a class.
@@ -216,6 +219,7 @@ public abstract class AopUtils {
 	public static boolean canApply(Pointcut pc, Class<?> targetClass, boolean hasIntroductions) {
 		Assert.notNull(pc, "Pointcut must not be null");
 		// 先判断 Pointcut 是否可以匹配目标类。如果不可以，则返回 false
+		//使用 ClassFilter 匹配 class
         if (!pc.getClassFilter().matches(targetClass)) {
 			return false;
 		}
@@ -233,6 +237,10 @@ public abstract class AopUtils {
 			introductionAwareMethodMatcher = (IntroductionAwareMethodMatcher) methodMatcher;
 		}
 
+		/**
+		 * 查找当前类及其父类（以及父类的父类等等）所实现的接口，由于接口中的方法是 public
+		 * 所以当前类可以继承其父类，和父类父类中所有的接口方法
+		 */
 		// 获得类和其所有接口
 		Set<Class<?>> classes = new LinkedHashSet<>();
 		if (!Proxy.isProxyClass(targetClass)) {
@@ -242,7 +250,7 @@ public abstract class AopUtils {
 
         // 遍历每个类，匹配每个类对应的方法
 		for (Class<?> clazz : classes) {
-		    // 遍历每个方法，判断是否匹配
+		    // 获取当前类的方法列表，包括父类中继承的方法，判断是否匹配
 			Method[] methods = ReflectionUtils.getAllDeclaredMethods(clazz);
 			for (Method method : methods) {
 			    // 根据情况，使用 IntroductionAwareMethodMatcher 还是 PointcutAdvisor ，调用对应的匹配方法
@@ -280,10 +288,15 @@ public abstract class AopUtils {
 	 * @return whether the pointcut can apply on any method
 	 */
 	public static boolean canApply(Advisor advisor, Class<?> targetClass, boolean hasIntroductions) {
+		/**
+		 * 从通知器中获取类型过滤器 ClassFilter，并调用 matchers 方法进行匹配。
+		 * ClassFilter 接口的实现类 AspectJExpressionPointcut 为例，该类的匹配工作由 AspectJ 表达式解析器负责，具体匹配细节不熟
+		 */
 		if (advisor instanceof IntroductionAdvisor) { // IntroductionAdvisor 增强器
 			return ((IntroductionAdvisor) advisor).getClassFilter().matches(targetClass);
 		} else if (advisor instanceof PointcutAdvisor) { // PointcutAdvisor 增强器
 			PointcutAdvisor pca = (PointcutAdvisor) advisor;
+			//对于普通类型的通知器，这里继续调用重载方法进行筛选。
 			return canApply(pca.getPointcut(), targetClass, hasIntroductions);
 		} else { // 其他，默认可以
 			// It doesn't have a pointcut so we assume it applies.
@@ -318,6 +331,7 @@ public abstract class AopUtils {
 				// already processed
 				continue;
 			}
+			// 筛选普通类型的通知器
 			if (canApply(candidate, clazz, hasIntroductions)) { // 判断，是否可以匹配
 				eligibleAdvisors.add(candidate);
 			}

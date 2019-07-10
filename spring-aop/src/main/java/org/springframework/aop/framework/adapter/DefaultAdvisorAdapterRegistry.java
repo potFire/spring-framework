@@ -84,12 +84,18 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 	public MethodInterceptor[] getInterceptors(Advisor advisor) throws UnknownAdviceTypeException {
 		List<MethodInterceptor> interceptors = new ArrayList<>(3);
 		Advice advice = advisor.getAdvice();
-		// 如果是 MethodInterceptor 对象，直接添加
+		/**
+		 * 若 advice 是 MethidInterceptor 类型的，直接添加到 interceptors 中即可，
+		 * 比如 AspectJAfterAdvice 就实现了 MethodInterceptor 接口
+		 */
 		if (advice instanceof MethodInterceptor) {
 			interceptors.add((MethodInterceptor) advice);
 		}
-        // 如果存在 AdvisorAdapter 的适配器，那么同样封装成 DefaultPointcutAdvisor 对象
-        // TODO 芋艿，如下的情况，需要找机会调试下
+		/**
+		 * 对于 AspectJMethodBeforeAdvice 等类型的通知，由于没有实现 MethodInterceptor 接口，
+		 * 所以这里需要通过适配器进行转换
+		 */
+		// TODO 芋艿，如下的情况，需要找机会调试下
         for (AdvisorAdapter adapter : this.adapters) {
 			if (adapter.supportsAdvice(advice)) {
 				interceptors.add(adapter.getInterceptor(advisor));
