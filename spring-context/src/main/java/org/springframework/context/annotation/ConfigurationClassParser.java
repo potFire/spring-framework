@@ -167,6 +167,10 @@ class ConfigurationClassParser {
 		for (BeanDefinitionHolder holder : configCandidates) {
 			BeanDefinition bd = holder.getBeanDefinition();
 			try {
+				/**
+				 * 根据BeanDefinition类型做不同处理
+				 * 带有注解的bd
+				 */
 				if (bd instanceof AnnotatedBeanDefinition) {
 					parse(((AnnotatedBeanDefinition) bd).getMetadata(), holder.getBeanName());
 				}
@@ -186,6 +190,9 @@ class ConfigurationClassParser {
 			}
 		}
 
+		/**
+		 * 处理需要延迟处理的ImportSelector
+		 */
 		processDeferredImportSelectors();
 	}
 
@@ -219,10 +226,17 @@ class ConfigurationClassParser {
 
 
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
+		/**
+		 * 判断是否跳过解析
+		 */
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
 		}
 
+		/**
+		 * 处理Imported的情况
+		 * 当前类有没有被别的类@Import
+		 */
 		ConfigurationClass existingClass = this.configurationClasses.get(configClass);
 		if (existingClass != null) {
 			if (configClass.isImported()) {
@@ -243,10 +257,20 @@ class ConfigurationClassParser {
 		// Recursively process the configuration class and its superclass hierarchy.
 		SourceClass sourceClass = asSourceClass(configClass);
 		do {
+			/**
+			 * 解析各种注解
+			 *
+			 * 扫描指定包下的类，并注册进DefaultListableBeanFactory
+			 */
 			sourceClass = doProcessConfigurationClass(configClass, sourceClass);
 		}
 		while (sourceClass != null);
 
+		/**
+		 * 一个map,用来存放处理完扫描的bd
+		 * 因为在扫描的过程中会发现bd有一些其他的注解需要处理
+		 * 发现后会给bd设置相应的属性值，再交由ConfigurationClassPostProcessor进行统一处理
+		 */
 		this.configurationClasses.put(configClass, configClass);
 	}
 
@@ -264,10 +288,16 @@ class ConfigurationClassParser {
 
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
 			// Recursively process any member (nested) classes first
+			/**
+			 * 处理内部类
+			 */
 			processMemberClasses(configClass, sourceClass);
 		}
 
 		// Process any @PropertySource annotations
+		/**
+		 * 处理@PropertySource，处理资源文件
+		 */
 		for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), PropertySources.class,
 				org.springframework.context.annotation.PropertySource.class)) {
@@ -281,12 +311,23 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @ComponentScan annotations
+		/**
+		 * 处理@ComponentScan
+		 */
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
+				/**
+				 * ComponentScanAnnotationParser是Spring的一个内部工具
+				 * 它会基于某个类上的@ComponentScan注解属性分析指定包(package)以获取其中的bean定义
+				 *
+				 * 扫描普通类
+				 * 带有@Component等四个元注解的类
+				 * 扫描完后注解注册
+				 */
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
@@ -302,10 +343,26 @@ class ConfigurationClassParser {
 			}
 		}
 
+		/**
+		 * 一下均不是普通类：不是通过扫描出来的
+		 * @Import/@ImportResource/@Bean等，会先放到当前ConfigurationClass中
+		 * 然后在ConfigurationClassPostProcessor后面进行统一处理/注册
+		 */
+		/**
+		 * @Import类型
+		 * 1.实现ImportSelector的类
+		 * 2.实现ImportBeanDefinitionRegistrar
+		 * 3.普通类
+		 */
 		// Process any @Import annotations
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
 
 		// Process any @ImportResource annotations
+		/**
+		 * 找到@ImportResource
+		 * 放到当前configClass的importedResources中
+		 * 在ConfigurationClassPostProcessor处理configClass时会随之一起处理
+		 */
 		AnnotationAttributes importResource =
 				AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);
 		if (importResource != null) {
@@ -318,6 +375,11 @@ class ConfigurationClassParser {
 		}
 
 		// Process individual @Bean methods
+		/**
+		 * 找到@Bean
+		 * 放到当前configClass的beanMethods中
+		 * 在ConfigurationClassPostProcessor处理configClass时会随之一起处理
+		 */
 		Set<MethodMetadata> beanMethods = retrieveBeanMethodMetadata(sourceClass);
 		for (MethodMetadata methodMetadata : beanMethods) {
 			configClass.addBeanMethod(new BeanMethod(methodMetadata, configClass));

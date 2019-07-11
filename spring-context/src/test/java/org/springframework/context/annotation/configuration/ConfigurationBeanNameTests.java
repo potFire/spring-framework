@@ -93,4 +93,30 @@ public class ConfigurationBeanNameTests {
 	static class C {
 		@Bean public String s() { return "s"; }
 	}
+
+	@Test
+	public void testHelloConfig(){
+
+	}
+
+	@Configuration
+	class BasedJava{
+
+		@Bean
+		public Hello hello(){
+			return new Hello();
+		}
+	}
+
+	class Hello{
+		private String message;
+
+		public String getMessage() {
+			return message;
+		}
+
+		public void setMessage(String message) {
+			this.message = message;
+		}
+	}
 }

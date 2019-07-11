@@ -160,6 +160,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 			Environment environment, @Nullable ResourceLoader resourceLoader) {
 
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
+		//设置 registry ，本质上是 annotationConfigApplicationContext
 		this.registry = registry;
 
 		if (useDefaultFilters) {
@@ -248,19 +249,26 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @return number of beans registered
 	 */
 	public int scan(String... basePackages) {
+		//获取已注册的 Bean 个数
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
-
+		//启动扫描器，扫描指定的package
 		doScan(basePackages);
 
 		// Register annotation config processors, if necessary.
+		//注册注解配置处理器
 		if (this.includeAnnotationConfig) {
 			AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 		}
-
+		//返回新注册的 Bean 的个数
 		return (this.registry.getBeanDefinitionCount() - beanCountAtScanStart);
 	}
 
 	/**
+	 * 总结：
+	 * 1、将包名下的bean扫描出来，并封装成 beandefinition
+	 * 2、Bean 作用域的处理，默认缺少 @Scope 注解，解析成单例
+	 * 3、借助AnnotationConfigUtils工具类解析通用注解
+	 * 4、将bean定义信息已beanname，beandifine键值对的形式注册到ioc容器中
 	 * Perform a scan within the specified base packages,
 	 * returning the registered bean definitions.
 	 * <p>This method does <i>not</i> register an annotation config processor
@@ -272,22 +280,49 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
+			/**
+			 * 扫描包下面定义的Bean
+			 * 过程：（来自谷歌）
+			 * 把类文件当成普通文件从本地磁盘中读进来变成一个字节数组（并没有经过JVM类加载过程），
+			 * 然后用 ASM去解析这个字节数组得到这个类的元数据，然后判断这个类的元数据里面是否有
+			 * @Component 等相关 Spring 注解。如果有的话后面才会进一步使用类加载器去加载这个类，
+			 * 没有的话就不会尝试去加载，用到了观察者模式
+			 */
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
+				//获取 Bean 的作用域，也就是判断@Scope注解的值，默认单例
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
+				//为Bean设置注解配置的作用域
 				candidate.setScope(scopeMetadata.getScopeName());
+				//为Bean设置名字
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+				/**
+				 * 判断BeanDefinition 是否是抽象 BeanDefinition，如果是就做一下校验
+				 */
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
+				//【重要】 如果扫描到的是注解的Bean，调用工具类处理通用的注解
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+				//根据Bean名称，检查Bean是否需要在容器中注册，也就是查看容器中是否存在这个Bean了。
 				if (checkCandidate(beanName, candidate)) {
+					//封装 beanName 和 beandefiniton 之前的映射
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
+					/**
+					 * 根据注解 Bean 定义类中配置的作用域 @Scope 注解的值，为Bean创建相应的代理模式，主要是在
+					 * AOP中使用
+					 */
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
+					/**
+					 * 通过DefaultListableBeanFactory.registerBeanDefinition(String beanName, BeanDefinition beanDefinition)
+					 * 按名称将bean定义信息注册到容器中，
+					 * 实际上DefaultListableBeanFactory内部维护一个Map<String, BeanDefinition>类型变量beanDefinitionMap，
+					 * 用于保存注bean定义信息（beanname 和 beandefine映射）
+					 */
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}

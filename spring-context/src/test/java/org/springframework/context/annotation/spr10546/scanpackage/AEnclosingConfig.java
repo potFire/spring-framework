@@ -16,6 +16,7 @@
 
 package org.springframework.context.annotation.spr10546.scanpackage;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.spr10546.ParentConfig;
 
@@ -30,4 +31,9 @@ import org.springframework.context.annotation.spr10546.ParentConfig;
 public class AEnclosingConfig {
 	@Configuration
 	public static class ChildConfig extends ParentConfig {}
+
+	@Bean
+	public String myTwoBean() {
+		return "myTwoBean";
+	}
 }

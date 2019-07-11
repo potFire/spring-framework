@@ -235,6 +235,10 @@ public abstract class AnnotationConfigUtils {
 	}
 
 	static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd, AnnotatedTypeMetadata metadata) {
+		/**
+		 * 如果Bean定义中有 @Lazy 注解，则将该 Bean 预实例化属性设置为 @Lazy 注解的值
+		 * 也就是，判断该 Bean 是否需要懒加载
+		 */
 		AnnotationAttributes lazy = attributesFor(metadata, Lazy.class);
 		if (lazy != null) {
 			abd.setLazyInit(lazy.getBoolean("value"));
@@ -246,18 +250,31 @@ public abstract class AnnotationConfigUtils {
 			}
 		}
 
+		/**
+		 * 如果 Bean 定义中有 @Primary 注解，则为该 Bean 设置为 autowiring 自动依赖注入的首选对象
+		 */
 		if (metadata.isAnnotated(Primary.class.getName())) {
 			abd.setPrimary(true);
 		}
+		/**
+		 * 如果 Bean 定义中有 @DependsOn 注解,则代表这个 Bean 显式地依赖DependsOn指定的这个 Bean
+		 * 所依赖的 Bean 会被容器确保在当前Bean实例化之前被实例化
+		 */
 		AnnotationAttributes dependsOn = attributesFor(metadata, DependsOn.class);
 		if (dependsOn != null) {
 			abd.setDependsOn(dependsOn.getStringArray("value"));
 		}
 
+		/**
+		 * 这个注解目前还没有找到很好的说明，先放着
+		 */
 		AnnotationAttributes role = attributesFor(metadata, Role.class);
 		if (role != null) {
 			abd.setRole(role.getNumber("value").intValue());
 		}
+		/**
+		 * 注解 @Description 是为 Bean 添加文本注释的
+		 */
 		AnnotationAttributes description = attributesFor(metadata, Description.class);
 		if (description != null) {
 			abd.setDescription(description.getString("value"));
@@ -267,10 +284,16 @@ public abstract class AnnotationConfigUtils {
 	static BeanDefinitionHolder applyScopedProxyMode(
 			ScopeMetadata metadata, BeanDefinitionHolder definition, BeanDefinitionRegistry registry) {
 
+		//获取Bean中@Scope 注解的 proxyMode 属性值
 		ScopedProxyMode scopedProxyMode = metadata.getScopedProxyMode();
+		//如果配置的 @Scope 注解的 proxyMode 属性值为 NO ，则不应用代理模式，默认是 default
 		if (scopedProxyMode.equals(ScopedProxyMode.NO)) {
 			return definition;
 		}
+		/**
+		 * 获取@Scope 注解的 proxyMode 属性值，如果为 TARGET_CLASS
+		 * 则返回true，如果是 INTERFACES 则返回 false
+		 */
 		boolean proxyTargetClass = scopedProxyMode.equals(ScopedProxyMode.TARGET_CLASS);
 		return ScopedProxyCreator.createScopedProxy(definition, registry, proxyTargetClass);
 	}
