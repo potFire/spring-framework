@@ -270,8 +270,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 
 			try {
-                // 从容器中获取 beanName 相应的 GenericBeanDefinition 对象，并将其转换为 RootBeanDefinition 对象
-				//根据指定 Bean 名称获取其父级的 Bean 定义，主要解决 Bean 继承时子类合并父类公共属性问题
+				/**
+				 * 合并Bean定义，因为首先获取的是子类的bean定义，如果有父类的话，
+				 * 要把父类的bean定义的公共属性合并到子类里面来，然后在创建bean实例
+				 */
 				final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
                 // 检查给定的合并的 BeanDefinition
 				checkMergedBeanDefinition(mbd, beanName, args);
@@ -282,8 +284,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {
-                        // 若给定的依赖 bean 已经注册为依赖给定的 bean
-                        // 即循环依赖的情况，抛出 BeanCreationException 异常
+						/**
+						 * 检查 Bean 实例依赖的 Bean 实例，如果 Bean 实例依赖其他的 bean 实例，
+						 * 那么依赖的 Bean 实例一定要先创建，否则直接抛出异常
+						 */
 						if (isDependent(beanName, dep)) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
@@ -326,14 +330,15 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					// It's a prototype -> create a new instance.
 					Object prototypeInstance;
 					try {
-						//回调 beforePrototypeCreation 方法，默认的功能是注册当前创建的原型对象
+						//先标记循环依赖
 						beforePrototypeCreation(beanName);
 						//创建指定 Bean 对象实例
 						prototypeInstance = createBean(beanName, mbd, args);
 					} finally {
+						//移除循环依赖标记
 						afterPrototypeCreation(beanName);
 					}
-					//获取给定 Bean 的实例对象
+					//创建原型bean实例
 					bean = getObjectForBeanInstance(prototypeInstance, name, beanName, mbd);
 				} else {
 				    // 获得 scopeName 对应的 Scope 对象
@@ -349,17 +354,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					try {
 					    // 从指定的 scope 下创建 bean，这里有使用了一个匿名内部类，获取一个指定生命周期范围的实例
 						Object scopedInstance = scope.get(beanName, () -> {
-						    // 加载前置处理
+							//先标记循环依赖
 							beforePrototypeCreation(beanName);
 							try {
 							    // 创建 Bean 对象
 								return createBean(beanName, mbd, args);
 							} finally {
-							    // 加载后缀处理
+								//移除循环依赖标记
 								afterPrototypeCreation(beanName);
 							}
 						});
-						// 从 Bean 实例中获取对象
+						// 创建对应的Bean实例
 						bean = getObjectForBeanInstance(scopedInstance, name, beanName, mbd);
 					} catch (IllegalStateException ex) {
 						throw new BeanCreationException(beanName,

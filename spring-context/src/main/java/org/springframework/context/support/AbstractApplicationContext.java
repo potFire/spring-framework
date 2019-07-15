@@ -534,10 +534,32 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Check for listener beans and register them.
                 // 注册监听器们
+				/**
+				 * 这是一个很重要的拓展点，如果你想对容器工作过程中发生的节点时间进行一些处理，
+				 * 比如容器要刷新，容器要关闭了，呢嘛就可以实现ApplicationListener
+				 * 举个栗子：
+				 * @Component
+				 * public class MyApplicationListener implements ApplicationListener<ApplicationEvent> {
+				 *
+				 *     @Override
+				 *     public void onApplicationEvent(ApplicationEvent event) {
+				 *         System.out.println("-----收到应用事件：" + event);
+				 *     }
+				 * }
+				 */
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
-                // 初始化非延迟加载的单例
+				/**
+				 * 初始化非延迟加载的单例，
+				 * a）什么时候实例化bean？
+				 * 　　单例bean可以在启动时实例化好，这样能提高使用时的效率
+				 * 　　原型bean在getBean（beanName）的时候实例化
+				 * b）单例bean和原型bean实例化的过程有区别吗？
+				 * 　　没有区别的
+				 * c）Spring中支持的bean实例创建的方式有几种？分别如何配置的，如何来获取Bean实例的？
+				 * 　　创建bean实例的方式：构造函数方式、工厂方式(静态工厂方式、非静态工厂方式)、实现FactoryBean的方式
+				 */
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
@@ -914,21 +936,28 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void registerListeners() {
 		// Register statically specified listeners first.
-        // 注册 Context 配置的 ApplicationListener 们，到 ApplicationEventMulticaster 中。
+		/**
+		 * getApplicationListeners就是获取applicationListeners
+		 * 是通过applicationListeners(listener)添加的
+		 * 放入applicationListeners中
+		 */
 		for (ApplicationListener<?> listener : getApplicationListeners()) {
 			getApplicationEventMulticaster().addApplicationListener(listener);
 		}
 
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let post-processors apply to them!
-        // 注册 ApplicationListener Bean 们，到 ApplicationEventMulticaster 中。
+		/**
+		 * 从容器中获取所有实现了ApplicationListener接口的bd的bdName
+		 * 放入applicationListenerBeans
+		 */
 		String[] listenerBeanNames = getBeanNamesForType(ApplicationListener.class, true, false);
 		for (String listenerBeanName : listenerBeanNames) {
 			getApplicationEventMulticaster().addApplicationListenerBean(listenerBeanName);
 		}
 
 		// Publish early application events now that we finally have a multicaster...
-        // 发布早期 earlyApplicationEvents 事件，到 ApplicationListener 们
+        // 发布早期 earlyApplicationEvents 事件，到 ApplicationListener 们，默认为空
 		Set<ApplicationEvent> earlyEventsToProcess = this.earlyApplicationEvents;
 		this.earlyApplicationEvents = null;
 		if (earlyEventsToProcess != null) {
@@ -944,7 +973,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
 		// Initialize conversion service for this context.
-        // TODO 芋艿 ConversionService 《Spring 源码深度解析》有说明
+		// 判断是否有bdName为conversionService的bd(实现ConversionService接口)，有的话注册为格式转换器服务类
 		if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &&
 				beanFactory.isTypeMatch(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class)) {
 			beanFactory.setConversionService(
@@ -954,13 +983,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Register a default embedded value resolver if no bean post-processor
 		// (such as a PropertyPlaceholderConfigurer bean) registered any before:
 		// at this point, primarily for resolution in annotation attribute values.
-        // TODO 芋艿
+        // 初始化内嵌值的解析器，如properties文件里面配置的值就需要这种解析器
 		if (!beanFactory.hasEmbeddedValueResolver()) {
 			beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
 		}
 
 		// Initialize LoadTimeWeaverAware beans early to allow for registering their transformers early.
-        // TODO 芋艿 AOP
+        // T获取LoadTimeWeaverAware类型的bd，提前实例化，bean实例初始化后，在进行代理增强，不创建原始bean实例，直接创建代理子类的实例
 		String[] weaverAwareNames = beanFactory.getBeanNamesForType(LoadTimeWeaverAware.class, false, false);
 		for (String weaverAwareName : weaverAwareNames) {
 			getBean(weaverAwareName);
@@ -970,7 +999,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.setTempClassLoader(null);
 
 		// Allow for caching all bean definition metadata, not expecting further changes.
-        // 冻结 BeanDefinition 配置
+		// 冻结上下文，不允许再进行修改配置
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.

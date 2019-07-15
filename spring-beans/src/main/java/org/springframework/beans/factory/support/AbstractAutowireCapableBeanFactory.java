@@ -506,10 +506,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		BeanWrapper instanceWrapper = null;
         // 单例模型，则从未完成的 FactoryBean 缓存中删除
 		if (mbd.isSingleton()) {
+			// 注意factoryBeanInstanceCache是ConcurrentMap,remove方法会返回删除的键值(如果不存在返回null)
 			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
 		}
         // 使用合适的实例化策略来创建新的实例：工厂方法、构造函数自动注入、简单初始化
 		if (instanceWrapper == null) {
+			// 如果factoryBeanInstanceCache没有缓存对应的BeanWrapper,则重新创建bean实例
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
         // 包装的实例对象
@@ -526,7 +528,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
-                    // 后置处理修改 BeanDefinition
+					/**
+					 * 合并bean定义，因为获取的时候是先获取的子的bean定义，所以要把夫的bean定义合并到子bean里面去
+					 */
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				} catch (Throwable ex) {
 					throw new BeanCreationException(mbd.getResourceDescription(), beanName,
@@ -538,7 +542,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// Eagerly cache singletons to be able to resolve circular references
 		// even when triggered by lifecycle interfaces like BeanFactoryAware.
-        // 解决单例模式的循环依赖
+        // 解决单例模式的循环依赖，先实例化bean依赖
         boolean earlySingletonExposure = (mbd.isSingleton() // 单例模式
                 && this.allowCircularReferences // 运行循环依赖
                 && isSingletonCurrentlyInCreation(beanName)); // 当前单例 bean 是否正在被创建
@@ -1035,6 +1039,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 这里是一个拓展点，InstantiationAwareBeanPostProcessor可以在Bean实例创建前，后进行增强处理，
+	 * 如果你想在bean实例创建前后进行处理可以继承InstantiationAwareBeanPostProcessor的
+	 * 子类InstantiationAwareBeanPostProcessorAdaper，然后覆写里面你需要实现的方法，创建前处理就实现创建前处理的方法
+	 * 对比：
+	 * BeanPostProcessor可以在bean实例初始化前和初始化后进行处理
+	 *
 	 * Apply before-instantiation post-processors, resolving whether there is a
 	 * before-instantiation shortcut for the specified bean.
 	 * @param beanName the name of the bean
@@ -1046,6 +1056,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Object bean = null;
 		if (!Boolean.FALSE.equals(mbd.beforeInstantiationResolved)) {
 			// Make sure bean class is actually resolved at this point.
+			/**
+			 * 如果不是synthetic和有InstantiationAwareBeanPosProcessors的话就获取目标类型，
+			 * 然后用目标类型和beanName创建代理实例
+			 */
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 				Class<?> targetType = determineTargetType(beanName, mbd);
 				if (targetType != null) {

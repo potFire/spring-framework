@@ -104,6 +104,9 @@ class ComponentScanAnnotationParser {
 			}
 		}
 
+		/**
+		 * 默认懒加载为false
+		 */
 		boolean lazyInit = componentScan.getBoolean("lazyInit");
 		if (lazyInit) {
 			scanner.getBeanDefinitionDefaults().setLazyInit(true);
@@ -129,6 +132,10 @@ class ComponentScanAnnotationParser {
 				return declaringClass.equals(className);
 			}
 		});
+		/**
+		 * 开始执行扫描
+		 * ComponentScanAnnotationParser 最终所使用的扫描器是ClassPathBeanDefinitionScanner
+		 */
 		return scanner.doScan(StringUtils.toStringArray(basePackages));
 	}
 
